@@ -24,17 +24,25 @@ this.namespace = this.namespace || {};
 	/** 高さ */
 	p.height;
 
+
 	/** 画像URL */
 	p.imgUrl;
 
-	/** FPS */ //TODO:おかしい
+	/** FPS */
 	p.fps;
 
+	/** 行 */
+	p.row;
+	
+	/** 列 */
+	p.column;
+	
 	/** トータルフレーム数 */
-	p.frames;
+	p.totalFrames;
 
  	/** アニメーション繰り返し回数 */
-	p.count;
+	p.repeatCount;
+
 
 	/** アニメーション終了後のコールバック関数 */
 	p.callback = null;
@@ -55,8 +63,8 @@ this.namespace = this.namespace || {};
 		this.selector = sel;
 
 		//初期設定値
-		this.fps = 10;
-		this.count = "infinite";
+		this.fps = 8;
+		this.repeatCount = 999999; //疑似無限
 	};
 
 	/**
@@ -65,30 +73,18 @@ this.namespace = this.namespace || {};
 	 */
 	p.showInitialFrame = function(){
 
+		var that = this;
+
 		if(this._validate() === false){
 			return;
 		}
 
-		jQuery(this.selector).css("width", this.width);
-		jQuery(this.selector).css("height", this.height);
-		jQuery(this.selector).css("overflow", "hidden");
-		// jQuery(this.selector).css("margin", "1em auto");
-		jQuery(this.selector).css("background", "url(" + this.imgUrl + ")");
-		var ms = 1 / this.fps * (this.count + 1);
-		jQuery(this.selector).css("animation", "initAnim " + ms + "s steps(1,end) " + this.count);
-
-		var styleSheet = document.styleSheets[0];
-		if(styleSheet === null || styleSheet === undefined){
-			var head = document.getElementsByTagName('head')[0];
-			var style = document.createElement('style');
-			head.appendChild(style);
-			styleSheet = style.sheet;
-		}
-		var initPosX = (this.frames) * this.width * (-1);
-		var keyframes = "@-webkit-keyframes initAnim { \n" + 
-						"	100% {background-position:" + initPosX + "px;}\n" + 
-						"}";
-		styleSheet.insertRule(keyframes, styleSheet.cssRules.length);
+		jQuery(that.selector).css("width", that.width);
+		jQuery(that.selector).css("height", that.height);
+		// jQuery(that.selector).css("overflow", "hidden");
+		jQuery(that.selector).css("background", "url(" + that.imgUrl + ")");
+		jQuery(that.selector).css("border", "0px");
+		jQuery(that.selector).css("background-position 0px 0px");
 	};
 
 	/**
@@ -115,44 +111,52 @@ this.namespace = this.namespace || {};
 	 */
 	p.start = function(){
 
-		if(this._validate() === false){
-			return;
-		}
-
 		var that = this;
 
-		jQuery(this.selector).on('webkitAnimationEnd', function(event) {
-			if(that.callback !== null){
-				that.callback();
-			}
-		});
-
-		jQuery(this.selector).css("width", this.width);
-		jQuery(this.selector).css("height", this.height);
-		jQuery(this.selector).css("overflow", "hidden");
-		// jQuery(this.selector).css("margin", "1em auto");
-		jQuery(this.selector).css("background", "url(" + this.imgUrl + ")");
-		var ms = 1 / this.fps * (this.count + 1);
-		jQuery(this.selector).css("animation", "mainAnim " + ms + "s steps(" + this.frames + ",end) " + this.count);
-
-		var styleSheet = document.styleSheets[0];
-		if(styleSheet === null || styleSheet === undefined){
-			var head = document.getElementsByTagName('head')[0];
-			var style = document.createElement('style');
-			head.appendChild(style);
-			styleSheet = style.sheet;
+		if(that.row === null || that.column === undefined){
+			that.column = that.totalFrames;
+			that.row = 1;
 		}
-		var initPosX = (this.frames) * this.width * (-1);
-		var keyframes = "@-webkit-keyframes mainAnim { \n" + 
-						"	100% {background-position:" + initPosX + "px;}\n" + 
-						"}";
-		styleSheet.insertRule(keyframes, styleSheet.cssRules.length);
+
+		jQuery(that.selector).css("width", that.width);
+		jQuery(that.selector).css("height", that.height);
+		// jQuery(that.selector).css("overflow", "hidden");
+		jQuery(that.selector).css("border", "none");
+		jQuery(that.selector).css("background", "url(" + that.imgUrl + ")");
+
+		var cnt = 0;
+		var rep = 0;
+		var interval = setInterval(function(){
+
+			var left = parseInt(cnt % that.column) * that.width * (-1);
+			var top = parseInt(cnt / that.column) * that.height * (-1);
+			jQuery(that.selector).css("background-position", left+ "px " + top + "px");
+			// jQuery(that.selector).css("background-position", left+ "px " + "-256px");
+
+			cnt++;
+
+			if(cnt === that.totalFrames) {
+				
+				rep++;
+				
+				if(rep !== that.repeatCount){
+					cnt = 0;
+				} else {
+					clearInterval(interval);
+					if(that.callback){
+						that.callback();
+					}
+				}
+			}
+
+
+		}, 1000 / that.fps);
 	};
 
 	/**
 	 * バリデーション
 	 *
-	 * @param boolean 
+	 * @return boolean 
 	 */
 	p._validate = function(){
 		if(this.width === null){
@@ -167,7 +171,7 @@ this.namespace = this.namespace || {};
 			console.log();
 			return false;
 		}
-		if(this.frames === null){
+		if(this.totalFrames === null){
 			console.log();
 			return false;
 		}
